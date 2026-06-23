@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grabby — محمّل الفيديوهات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1117; --surface:#171A24; --surface-2:#1E2230; --border:#2A2F40;
+    --text:#ECEEF2; --muted:#8B92A6; --accent:#F2A93B; --accent-2:#E8543E;
+    --success:#3DD68C; --danger:#F2554D;
+    --display:'Cairo','Tajawal',system-ui,sans-serif;
+    --body:'Tajawal',system-ui,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--body); background:var(--bg); color:var(--text);
+    min-height:100%; display:flex; flex-direction:column; align-items:center;
+    padding:32px 18px 48px;
+    background-image:radial-gradient(1200px 600px at 80% -10%, rgba(242,169,59,.10), transparent 60%),
+                     radial-gradient(900px 500px at 0% 110%, rgba(232,84,62,.08), transparent 55%);
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;margin-top:8px}
+  .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 8px 24px rgba(242,169,59,.25)}
+  .logo svg{width:24px;height:24px}
+  .brand h1{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.5px}
+  .brand span{color:var(--muted);font-size:13px;display:block;font-weight:500;margin-top:1px}
+
+  .card{
+    width:100%;max-width:560px;background:var(--surface);
+    border:1px solid var(--border);border-radius:20px;position:relative;overflow:hidden;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.6);
+  }
+  /* الموجة الذهبية اللي بتطلع مع نسبة التحميل — العنصر المميّز */
+  .fill{position:absolute;inset:auto 0 0 0;height:0%;transition:height .4s cubic-bezier(.2,.8,.2,1);
+    background:linear-gradient(0deg, rgba(242,169,59,.16), rgba(232,84,62,.04) 70%, transparent);
+    pointer-events:none;z-index:0}
+  .inner{position:relative;z-index:1;padding:26px}
+
+  .field{display:flex;gap:10px;align-items:stretch}
+  .field input{
+    flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:13px;
+    color:var(--text);font-family:var(--body);font-size:15px;padding:15px 16px;outline:none;
+    transition:border-color .15s, box-shadow .15s; direction:ltr; text-align:left;
+  }
+  .field input::placeholder{color:var(--muted);text-align:right;direction:rtl}
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(242,169,59,.15)}
+  .btn{
+    border:0;border-radius:13px;font-family:var(--body);font-weight:700;font-size:15px;
+    cursor:pointer;padding:14px 22px;display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    transition:transform .12s, filter .15s, opacity .15s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#1a1206}
+  .btn-primary:hover{filter:brightness(1.06)}
+  .btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--muted)}
+  .btn-block{width:100%;margin-top:18px;padding:16px}
+
+  .hint{color:var(--muted);font-size:13px;margin-top:14px;line-height:1.7;text-align:center}
+
+  /* المعاينة */
+  .preview{display:none;margin-top:22px}
+  .pv-head{display:flex;gap:14px;align-items:flex-start}
+  .thumb{width:128px;aspect-ratio:16/9;border-radius:11px;object-fit:cover;background:var(--surface-2);flex-shrink:0;border:1px solid var(--border)}
+  .pv-meta{min-width:0;flex:1}
+  .pv-title{font-family:var(--display);font-weight:600;font-size:16px;line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pv-sub{color:var(--muted);font-size:13px;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px}
+
+  .qlabel{color:var(--muted);font-size:13px;font-weight:500;margin:20px 0 10px}
+  .qualities{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px}
+  .q{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 8px;
+    cursor:pointer;text-align:center;transition:.15s;user-select:none}
+  .q:hover{border-color:var(--muted)}
+  .q.active{border-color:var(--accent);background:rgba(242,169,59,.10);box-shadow:0 0 0 1px var(--accent) inset}
+  .q b{display:block;font-size:15px;font-weight:700}
+  .q small{color:var(--muted);font-size:11px}
+
+  /* شريط التقدّم */
+  .progress{display:none;margin-top:24px}
+  .bar{height:12px;background:var(--surface-2);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+  .bar i{display:block;height:100%;width:0%;border-radius:999px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s ease}
+  .pstats{display:flex;justify-content:space-between;margin-top:12px;font-size:13px;color:var(--muted)}
+  .pstats b{color:var(--text);font-variant-numeric:tabular-nums}
+  .ptitle{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:14px;
+    display:flex;align-items:center;gap:9px}
+  .spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* النتيجة */
+  .result{display:none;margin-top:22px;text-align:center}
+  .result .ic{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;margin:0 auto 14px}
+  .ic.ok{background:rgba(61,214,140,.12);color:var(--success)}
+  .ic.err{background:rgba(242,85,77,.12);color:var(--danger)}
+  .result h3{font-family:var(--display);font-weight:600;font-size:18px}
+  .result p{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.7}
+
+  .toolbar{display:flex;gap:8px;margin-top:18px;justify-content:center;flex-wrap:wrap}
+
+  .banner{max-width:560px;width:100%;margin-bottom:16px;background:rgba(242,85,77,.08);
+    border:1px solid rgba(242,85,77,.35);color:#ffd2cf;border-radius:14px;padding:13px 16px;
+    font-size:13.5px;line-height:1.7;display:none}
+  .banner code{background:#000;padding:2px 7px;border-radius:6px;font-size:12px;direction:ltr;display:inline-block}
+  .footer{color:var(--muted);font-size:12px;margin-top:26px;text-align:center;line-height:1.8;max-width:520px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1206" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Grabby</h1>
+      <span>محمّل فيديوهات — يوتيوب، فيس بوك، وأكتر من ألف موقع</span>
+    </div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="card">
+    <div class="fill" id="fill"></div>
+    <div class="inner">
+
+      <!-- إدخال الرابط -->
+      <div id="stage-input">
+        <div class="field">
+          <input id="url" type="text" placeholder="الصق رابط الفيديو هنا…" spellcheck="false" autocomplete="off" />
+          <button class="btn btn-primary" id="fetchBtn" onclick="fetchInfo()">
+            <span id="fetchLabel">جلب</span>
+          </button>
+        </div>
+        <p class="hint">انسخ رابط أي فيديو وألصقه — هنعرضلك الجودات المتاحة قبل التحميل.<br>
+          استخدم البرنامج للمحتوى اللي ليك حق فيه أو المرخّص.</p>
+      </div>
+
+      <!-- المعاينة + اختيار الجودة -->
+      <div class="preview" id="preview">
+        <div class="pv-head">
+          <img class="thumb" id="thumb" alt="" />
+          <div class="pv-meta">
+            <div class="pv-title" id="pvTitle"></div>
+            <div class="pv-sub" id="pvSub"></div>
+          </div>
+        </div>
+        <div class="qlabel">اختار الجودة</div>
+        <div class="qualities" id="qualities">
+          <div class="q active" data-q="best"><b>أعلى</b><small>أفضل جودة</small></div>
+          <div class="q" data-q="1080"><b>1080p</b><small>Full HD</small></div>
+          <div class="q" data-q="720"><b>720p</b><small>HD</small></div>
+          <div class="q" data-q="480"><b>480p</b><small>أخف حجمًا</small></div>
+          <div class="q" data-q="audio"><b>صوت</b><small>MP3</small></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="startDownload()">تحميل الآن</button>
+        <div class="toolbar"><button class="btn btn-ghost" onclick="reset()">رابط تاني</button></div>
+      </div>
+
+      <!-- التقدّم -->
+      <div class="progress" id="progress">
+        <div class="ptitle"><span class="spin"></span><span>جارٍ التحميل…</span></div>
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="pstats">
+          <span><b id="pPercent">0%</b> مكتمل</span>
+          <span><b id="pSpeed">—</b></span>
+          <span>المتبقّي <b id="pEta">—</b></span>
+        </div>
+        <div class="toolbar"><button class="btn btn-ghost" onclick="cancelDownload()">إلغاء</button></div>
+      </div>
+
+      <!-- النتيجة -->
+      <div class="result" id="result"></div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <div id="mobileLink" style="display:none;margin-bottom:10px">
+      📱 افتح من موبايلك (نفس الواي فاي): <a id="mobileUrl" href="#" style="direction:ltr;display:inline-block"></a>
+    </div>
+    Grabby يعمل محليًا على جهازك. مبني على
+    <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a>.
+    أنت مسؤول عن احترام حقوق الملكية وشروط استخدام المنصات.
+  </div>
+
+<script>
+let selectedQuality = 'best';
+let currentInfo = null;
+let currentJob = null;
+let evtSource = null;
+
+// فحص الأدوات عند الفتح
+fetch('/api/check').then(r=>r.json()).then(c=>{
+  const miss=[];
+  if(!c.ytdlp) miss.push('yt-dlp');
+  if(!c.ffmpeg) miss.push('ffmpeg');
+  if(miss.length){
+    const b=document.getElementById('banner');
+    b.style.display='block';
+    b.innerHTML = `⚠️ مفقود: <b>${miss.join('، ')}</b> — شغّل <code>SETUP.bat</code> مرة واحدة بس،`+
+      ` وهو هينزّلهم تلقائيًا جوّه فولدر <code>bin</code> جنب البرنامج. بعدها قفل ده وافتح <code>START.bat</code> تاني.`;
+  }
+}).catch(()=>{});
+
+// عرض رابط الموبايل (لو مفتوح من الكمبيوتر)
+fetch('/api/net').then(r=>r.json()).then(n=>{
+  if(!n.url || /127\.0\.0\.1/.test(n.url)) return;
+  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if(isLocal){
+    document.getElementById('mobileLink').style.display='block';
+    const a=document.getElementById('mobileUrl'); a.textContent=n.url; a.href=n.url;
+  }
+}).catch(()=>{});
+
+// اختيار الجودة
+document.getElementById('qualities').addEventListener('click', e=>{
+  const q=e.target.closest('.q'); if(!q) return;
+  document.querySelectorAll('.q').forEach(x=>x.classList.remove('active'));
+  q.classList.add('active'); selectedQuality=q.dataset.q;
+});
+
+document.getElementById('url').addEventListener('keydown', e=>{ if(e.key==='Enter') fetchInfo(); });
+
+function fmtDur(s){ s=Math.round(s||0); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(x).padStart(2,'0'); }
+function fmtSize(b){ if(!b) return '—'; const u=['B','KB','MB','GB']; let i=0; while(b>=1024&&i<3){b/=1024;i++;} return b.toFixed(b<10&&i?1:0)+' '+u[i]; }
+function fmtSpeed(b){ return b? fmtSize(b)+'/ث' : '—'; }
+function fmtEta(s){ if(!s) return '—'; const m=Math.floor(s/60),x=Math.round(s%60); return m?`${m}د ${x}ث`:`${x}ث`; }
+
+async function fetchInfo(){
+  const url=document.getElementById('url').value.trim();
+  if(!url) return;
+  const btn=document.getElementById('fetchBtn'), lbl=document.getElementById('fetchLabel');
+  btn.disabled=true; lbl.textContent='…';
+  try{
+    const r=await fetch('/api/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'تعذّر جلب المعلومات');
+    currentInfo=data;
+    document.getElementById('thumb').src=data.thumbnail||'';
+    document.getElementById('thumb').style.display=data.thumbnail?'block':'none';
+    document.getElementById('pvTitle').textContent=data.title;
+    const sub=document.getElementById('pvSub'); sub.innerHTML='';
+    if(data.uploader) sub.append(chip(data.uploader));
+    if(data.duration) sub.append(chip('⏱ '+fmtDur(data.duration)));
+    if(data.extractor) sub.append(chip(data.extractor));
+    show('preview');
+  }catch(err){
+    showResult(false,'مش قادر أقرأ الرابط', err.message);
+  }finally{ btn.disabled=false; lbl.textContent='جلب'; }
+}
+
+function chip(t){ const s=document.createElement('span'); s.className='chip'; s.textContent=t; return s; }
+
+async function startDownload(){
+  show('progress');
+  setFill(0); updateBar({percent:0});
+  try{
+    const r=await fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:currentInfo.url, quality:selectedQuality})});
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'تعذّر بدء التحميل');
+    currentJob=data.id;
+    listen(data.id);
+  }catch(err){ showResult(false,'فشل بدء التحميل', err.message); }
+}
+
+function listen(id){
+  evtSource=new EventSource('/api/progress?id='+id);
+  evtSource.onmessage=(e)=>{
+    const s=JSON.parse(e.data);
+    if(s.status==='running'){ updateBar(s); }
+    else if(s.status==='done'){
+      evtSource.close(); setFill(100); updateBar({percent:100, speed:0, eta:0});
+      window.location.href='/api/file?id='+id; // تنزيل تلقائي
+      showResult(true,'تم التحميل بنجاح', `${fmtSize(s.total)} — لو التنزيل ما بدأش، اضغط الزر تحت.`, id);
+    }
+    else if(s.status==='error'){ evtSource.close(); showResult(false,'حصل خطأ', s.error||'فشل التحميل'); }
+  };
+  evtSource.onerror=()=>{ if(evtSource) evtSource.close(); };
+}
+
+function updateBar(s){
+  const p=Math.round(s.percent||0);
+  document.getElementById('barFill').style.width=p+'%';
+  document.getElementById('pPercent').textContent=p+'%';
+  document.getElementById('pSpeed').textContent=fmtSpeed(s.speed);
+  document.getElementById('pEta').textContent=fmtEta(s.eta);
+  setFill(s.percent||0);
+}
+function setFill(p){ document.getElementById('fill').style.height=p+'%'; }
+
+async function cancelDownload(){
+  if(evtSource) evtSource.close();
+  if(currentJob) await fetch('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:currentJob})});
+  reset();
+}
+
+function showResult(ok,title,msg,id){
+  const r=document.getElementById('result');
+  r.innerHTML=`
+    <div class="ic ${ok?'ok':'err'}">
+      ${ok?'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+          :'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'}
+    </div>
+    <h3>${title}</h3>
+    <p>${msg||''}</p>
+    <div class="toolbar">
+      ${ok&&id?`<a class="btn btn-primary" href="/api/file?id=${id}">حفظ الملف</a>`:''}
+      <button class="btn btn-ghost" onclick="reset()">${ok?'تحميل تاني':'حاول مرة أخرى'}</button>
+    </div>`;
+  show('result');
+}
+
+function show(stage){
+  ['stage-input','preview','progress','result'].forEach(s=>{
+    document.getElementById(s).style.display = (s===stage)?'block':'none';
+  });
+  if(stage==='stage-input') setFill(0);
+}
+
+function reset(){
+  if(evtSource) evtSource.close();
+  currentInfo=null; currentJob=null; selectedQuality='best';
+  document.getElementById('url').value='';
+  document.querySelectorAll('.q').forEach((x,i)=>x.classList.toggle('active',i===0));
+  show('stage-input');
+  document.getElementById('url').focus();
+}
+</script>
+</body>
+</html>

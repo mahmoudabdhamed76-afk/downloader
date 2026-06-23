@@ -1,0 +1,8 @@
+{
+  "name": "grabby",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arabic RTL video downloader (YouTube/Facebook) — zero-dependency Node.js + yt-dlp",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.js" }
+}
