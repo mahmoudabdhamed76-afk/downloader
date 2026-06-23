@@ -276,13 +276,27 @@ function cleanErr(msg) {
 }
 
 // ---------- إنشاء الخادم ----------
-const INDEX = fs.readFileSync(path.join(__dirname, 'index.html'));
+const INDEX_PATH = path.join(__dirname, 'index.html');
+function loadIndex() {
+  try {
+    return fs.readFileSync(INDEX_PATH);
+  } catch {
+    return Buffer.from(
+      '<!doctype html><meta charset="utf-8"><div style="font-family:sans-serif;direction:rtl;padding:40px;text-align:center">' +
+      '<h2>⚠️ ملف index.html مش موجود في النشر</h2>' +
+      '<p>اتأكد إن <b>index.html</b> مرفوع في نفس مجلد <b>server.js</b> في المستودع.</p></div>'
+    );
+  }
+}
+if (!fs.existsSync(INDEX_PATH)) {
+  console.log('  ⚠️  index.html مش موجود جنب server.js — الواجهة مش هتظهر لحد ما ترفعه.');
+}
 
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${req.headers.host}`);
   const key = `${req.method} ${u.pathname}`;
 
-  if (key === 'GET /') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(INDEX); }
+  if (key === 'GET /') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(loadIndex()); }
 
   const handler = routes[key];
   if (handler) { try { return await handler(req, res, u); } catch (e) { return send(res, 500, { error: String(e.message) }); } }
